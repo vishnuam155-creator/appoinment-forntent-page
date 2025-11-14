@@ -10,6 +10,9 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 // Get the API base URL from environment variables or use default
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+// Debug log to verify the base URL
+console.log('API Base URL:', API_BASE_URL);
+
 /**
  * Create axios instance with default configuration
  */
@@ -26,6 +29,10 @@ export const apiClient: AxiosInstance = axios.create({
  */
 apiClient.interceptors.request.use(
   (config) => {
+    // Debug log to see the full request URL
+    console.log('Making request to:', config.baseURL + config.url);
+    console.log('Request config:', { baseURL: config.baseURL, url: config.url });
+
     // Add authentication token if available
     const token = localStorage.getItem('authToken');
     if (token) {
