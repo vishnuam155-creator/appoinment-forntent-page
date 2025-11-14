@@ -4,6 +4,7 @@ import ChatInput from "@/components/ChatInput";
 import { AudioRecorder } from "@/utils/audioRecorder";
 import { useToast } from "@/hooks/use-toast";
 import { Bot } from "lucide-react";
+import { sendChatMessage, speechToText } from "@/services/api";
 
 interface Message {
   id: string;
@@ -21,6 +22,7 @@ const Index = () => {
       timestamp: new Date(),
     },
   ]);
+  const [conversationId, setConversationId] = useState<string>("");
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
@@ -43,40 +45,39 @@ const Index = () => {
     setIsProcessing(true);
 
     try {
-      const response = await fetch("/api/chatbot/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: content }),
+      // Send message to backend API
+      const data = await sendChatMessage({
+        message: content,
+        conversation_id: conversationId || undefined,
       });
 
-      if (!response.ok) {
-        throw new Error("API request failed");
+      // Store conversation ID for subsequent messages
+      if (data.conversation_id && !conversationId) {
+        setConversationId(data.conversation_id);
       }
 
-      const data = await response.json();
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.response || data.message || "Response received",
+        content: data.response || "Response received",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
-      // Fallback response when API is not available
+      console.error("Error sending message:", error);
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "I'm a demo chatbot. To enable real AI responses, you'll need to set up the backend API endpoint.",
+        content: "Sorry, I couldn't connect to the backend. Please make sure the backend server is running at http://127.0.0.1:8000",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);
-      
+
       toast({
-        title: "API unavailable",
-        description: "Using demo mode. Connect a backend to enable real responses.",
-        variant: "default",
+        title: "Connection Error",
+        description: "Failed to connect to backend API. Check console for details.",
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
@@ -114,27 +115,34 @@ const Index = () => {
         description: "Converting speech to text...",
       });
 
-      // Simulate voice processing (replace with actual API call)
-      setTimeout(() => {
+      try {
+        // Convert speech to text using backend API
+        const transcription = await speechToText({
+          audio_data: audioBlob,
+          language: "en",
+          format: "wav",
+        });
+
+        // Add user message with transcribed text
         const userMessage: Message = {
           id: Date.now().toString(),
           role: "user",
-          content: "[Voice message - transcription would appear here]",
+          content: transcription.text,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, userMessage]);
 
-        setTimeout(() => {
-          const aiMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            role: "assistant",
-            content: "I heard your voice message! To enable voice transcription and AI responses, you'll need to connect speech-to-text and AI services.",
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, aiMessage]);
-          setIsProcessing(false);
-        }, 1000);
-      }, 500);
+        // Send transcribed text to chatbot
+        await handleSendMessage(transcription.text);
+      } catch (error) {
+        console.error("Error processing voice:", error);
+        toast({
+          title: "Voice Processing Error",
+          description: "Failed to convert speech to text. Make sure the backend is running.",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+      }
     } catch (error) {
       toast({
         title: "Error",
