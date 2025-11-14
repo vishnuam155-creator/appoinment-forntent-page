@@ -24,7 +24,7 @@ const Index = () => {
       timestamp: new Date(),
     },
   ]);
-  const [conversationId, setConversationId] = useState<string>("");
+  const [sessionId, setSessionId] = useState<string>("");  // Backend uses session_id
   const [options, setOptions] = useState<ChatOption[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -48,29 +48,28 @@ const Index = () => {
     setIsProcessing(true);
 
     try {
-      // Send message to backend API
+      // Send message to backend API with correct field name
       const data = await sendChatMessage({
         message: content,
-        conversation_id: conversationId || undefined,
+        session_id: sessionId || undefined,  // Backend expects session_id
       });
 
       // Debug: Log the full response to see what backend returns
       console.log('Backend response:', data);
       console.log('Response structure:', JSON.stringify(data, null, 2));
 
-      // Store conversation ID for subsequent messages
-      if (data.conversation_id && !conversationId) {
-        setConversationId(data.conversation_id);
+      // Check if request was successful
+      if (!data.success) {
+        throw new Error(data.message || 'API request failed');
       }
 
-      // Try different possible response field names
-      const responseText = data.response ||
-                          data.message ||
-                          data.reply ||
-                          data.text ||
-                          data.content ||
-                          (typeof data === 'string' ? data : null) ||
-                          JSON.stringify(data);
+      // Store session ID for subsequent messages (backend uses session_id)
+      if (data.session_id && !sessionId) {
+        setSessionId(data.session_id);
+      }
+
+      // Backend returns 'message' field, not 'response'
+      const responseText = data.message || data.response || 'No response from server';
 
       console.log('Extracted response text:', responseText);
 

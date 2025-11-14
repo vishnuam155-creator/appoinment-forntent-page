@@ -39,7 +39,7 @@ export interface ChatMessage {
 
 export interface ChatRequest {
   message: string;
-  conversation_id?: string;
+  session_id?: string;  // Backend uses session_id, not conversation_id
   context?: Record<string, any>;
 }
 
@@ -51,13 +51,15 @@ export interface ChatOption {
 }
 
 export interface ChatResponse {
-  response: string;
-  conversation_id: string;
-  message_id?: string;
-  timestamp?: string;
-  suggestions?: string[];
+  success: boolean;      // Backend always returns success flag
+  session_id: string;    // Backend uses session_id, not conversation_id
+  message: string;       // Backend uses 'message', not 'response'
+  action?: string;       // Backend includes action field (ask_symptoms, etc.)
   options?: ChatOption[];
-  metadata?: Record<string, any>;
+  booking_id?: string | null;
+  // Legacy fields for compatibility
+  response?: string;     // Some endpoints might use this
+  conversation_id?: string;
 }
 
 // ========== Voice Types ==========
@@ -96,18 +98,21 @@ export interface TextToSpeechResponse {
 
 export interface VoiceAssistantRequest {
   audio_data?: Blob | File;
-  text?: string;
-  conversation_id?: string;
-  context?: Record<string, any>;
+  message?: string;      // Backend expects 'message', not 'text'
+  session_id?: string;   // Backend uses session_id
+  session_data?: Record<string, any>;  // Backend uses session_data
 }
 
 export interface VoiceAssistantResponse {
-  text_response: string;
-  audio_response?: string; // URL or base64
-  conversation_id: string;
-  transcript?: string; // What the user said
-  confidence?: number;
-  actions?: AssistantAction[];
+  success: boolean;      // Backend returns success flag
+  session_id: string;    // Backend uses session_id
+  message: string;       // Backend uses 'message', not 'text_response'
+  stage?: string;        // Backend includes stage (date_selection, etc.)
+  action?: string;       // Backend includes action (continue, etc.)
+  data?: Record<string, any>;  // Backend includes data object
+  // Legacy fields for compatibility
+  text_response?: string;
+  conversation_id?: string;
 }
 
 export interface AssistantAction {

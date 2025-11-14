@@ -14,7 +14,7 @@ const VoiceAssistant = () => {
     { type: "bot", content: "Hello! I'm MediBot, your voice medical assistant. Click 'Start' and I'll help you book an appointment." }
   ]);
   const [transcript, setTranscript] = useState("...");
-  const [conversationId, setConversationId] = useState<string>("");
+  const [sessionId, setSessionId] = useState<string>("");  // Backend uses session_id
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -112,18 +112,24 @@ const VoiceAssistant = () => {
     setTranscript("...");
 
     try {
-      // Send message to voice assistant backend API
+      // Send message to voice assistant backend API with correct field names
       const response = await sendVoiceAssistantRequest({
-        text: message,
-        conversation_id: conversationId || undefined,
+        message: message,                    // Backend expects 'message', not 'text'
+        session_id: sessionId || undefined,  // Backend uses session_id
       });
 
-      // Store conversation ID for subsequent messages
-      if (response.conversation_id && !conversationId) {
-        setConversationId(response.conversation_id);
+      // Check if request was successful
+      if (!response.success) {
+        throw new Error(response.message || 'API request failed');
       }
 
-      const botResponse = response.text_response || "I'm here to help you!";
+      // Store session ID for subsequent messages (backend uses session_id)
+      if (response.session_id && !sessionId) {
+        setSessionId(response.session_id);
+      }
+
+      // Backend returns 'message' field, not 'text_response'
+      const botResponse = response.message || response.text_response || "I'm here to help you!";
       setMessages(prev => [...prev, { type: "bot", content: botResponse }]);
       speak(botResponse);
       setStatus("Listening...");
