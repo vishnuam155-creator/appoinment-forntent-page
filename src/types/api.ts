@@ -43,12 +43,20 @@ export interface ChatRequest {
   context?: Record<string, any>;
 }
 
+export interface ChatOption {
+  value: string;
+  label: string;
+  description?: string;
+  available?: boolean;
+}
+
 export interface ChatResponse {
   response: string;
   conversation_id: string;
   message_id?: string;
   timestamp?: string;
   suggestions?: string[];
+  options?: ChatOption[];
   metadata?: Record<string, any>;
 }
 

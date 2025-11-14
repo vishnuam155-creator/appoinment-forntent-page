@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
+import ChatOptions from "@/components/ChatOptions";
 import { AudioRecorder } from "@/utils/audioRecorder";
 import { useToast } from "@/hooks/use-toast";
 import { Bot } from "lucide-react";
 import { sendChatMessage, speechToText } from "@/services/api";
+import type { ChatOption } from "@/types/api";
 
 interface Message {
   id: string;
@@ -23,6 +25,7 @@ const Index = () => {
     },
   ]);
   const [conversationId, setConversationId] = useState<string>("");
+  const [options, setOptions] = useState<ChatOption[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
@@ -31,7 +34,7 @@ const Index = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, options]);
 
   const handleSendMessage = async (content: string) => {
     const userMessage: Message = {
@@ -78,6 +81,14 @@ const Index = () => {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);
+
+      // Update options if provided by backend
+      if (data.options && Array.isArray(data.options)) {
+        console.log('Received options:', data.options);
+        setOptions(data.options);
+      } else {
+        setOptions([]);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
 
@@ -88,6 +99,7 @@ const Index = () => {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);
+      setOptions([]); // Clear options on error
 
       toast({
         title: "Connection Error",
@@ -97,6 +109,14 @@ const Index = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleSelectOption = async (value: string, label: string) => {
+    // Clear options immediately when one is selected
+    setOptions([]);
+
+    // Send the selected option as a message
+    await handleSendMessage(value);
   };
 
   const handleStartRecording = async () => {
@@ -208,6 +228,15 @@ const Index = () => {
                   <div className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
+            </div>
+          )}
+          {options.length > 0 && (
+            <div className="mt-4">
+              <ChatOptions
+                options={options}
+                onSelectOption={handleSelectOption}
+                disabled={isProcessing}
+              />
             </div>
           )}
           <div ref={messagesEndRef} />
