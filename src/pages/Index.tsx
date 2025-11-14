@@ -51,15 +51,30 @@ const Index = () => {
         conversation_id: conversationId || undefined,
       });
 
+      // Debug: Log the full response to see what backend returns
+      console.log('Backend response:', data);
+      console.log('Response structure:', JSON.stringify(data, null, 2));
+
       // Store conversation ID for subsequent messages
       if (data.conversation_id && !conversationId) {
         setConversationId(data.conversation_id);
       }
 
+      // Try different possible response field names
+      const responseText = data.response ||
+                          data.message ||
+                          data.reply ||
+                          data.text ||
+                          data.content ||
+                          (typeof data === 'string' ? data : null) ||
+                          JSON.stringify(data);
+
+      console.log('Extracted response text:', responseText);
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.response || "Response received",
+        content: responseText,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);

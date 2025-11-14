@@ -13,7 +13,11 @@ import type { ChatRequest, ChatResponse, ChatMessage, ApiResponse } from '@/type
  * @returns Promise with the chatbot response
  */
 export const sendChatMessage = async (request: ChatRequest): Promise<ChatResponse> => {
+  console.log('Sending to chatbot API:', request);
   const response = await apiClient.post<ChatResponse>('/api/chatbot/', request);
+  console.log('Raw axios response:', response);
+  console.log('Response data:', response.data);
+  console.log('Response status:', response.status);
   return response.data;
 };
 
