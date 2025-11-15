@@ -19,6 +19,7 @@ const VoiceAssistant = () => {
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);  // For playing bot audio responses
+  const isBotSpeakingRef = useRef<boolean>(false);  // Track if bot is currently speaking
   const { toast } = useToast();
 
   useEffect(() => {
@@ -77,7 +78,8 @@ const VoiceAssistant = () => {
     };
 
     recognitionRef.current.onend = () => {
-      if (isListening) {
+      // Don't auto-restart if bot is currently speaking (will be resumed after bot finishes)
+      if (isListening && !isBotSpeakingRef.current) {
         setTimeout(() => {
           try {
             recognitionRef.current?.start();
@@ -85,7 +87,7 @@ const VoiceAssistant = () => {
             console.log('Recognition restart failed:', e);
           }
         }, 100);
-      } else {
+      } else if (!isListening) {
         setStatus("Click 'Start' to begin");
       }
     };
@@ -100,6 +102,7 @@ const VoiceAssistant = () => {
 
   const stopVoiceAssistant = () => {
     setIsListening(false);
+    isBotSpeakingRef.current = false;  // Reset the flag
     recognitionRef.current?.stop();
     window.speechSynthesis.cancel();
     // Stop audio playback if active
@@ -181,9 +184,50 @@ const VoiceAssistant = () => {
   };
 
   const speak = (text: string) => {
+    // Set flag to prevent auto-restart during bot speech
+    isBotSpeakingRef.current = true;
+
+    // Pause speech recognition while bot is speaking to prevent feedback
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+      console.log('🔇 Paused listening for bot speech');
+    }
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-IN';
     utterance.rate = 0.9;
+
+    // Resume listening after bot finishes speaking
+    utterance.onend = () => {
+      isBotSpeakingRef.current = false;
+      console.log('🔊 Bot finished speaking, resuming listening');
+      if (isListening) {
+        setTimeout(() => {
+          try {
+            recognitionRef.current?.start();
+            console.log('✓ Listening resumed');
+          } catch (e) {
+            console.log('Recognition already running or failed to restart:', e);
+          }
+        }, 500); // Small delay to ensure clean transition
+      }
+    };
+
+    utterance.onerror = (event) => {
+      isBotSpeakingRef.current = false;
+      console.error('Speech synthesis error:', event);
+      // Resume listening even if speech fails
+      if (isListening) {
+        setTimeout(() => {
+          try {
+            recognitionRef.current?.start();
+          } catch (e) {
+            console.log('Failed to restart recognition after error:', e);
+          }
+        }, 500);
+      }
+    };
+
     window.speechSynthesis.speak(utterance);
   };
 
@@ -191,13 +235,50 @@ const VoiceAssistant = () => {
     // Stop any ongoing speech synthesis
     window.speechSynthesis.cancel();
 
+    // Set flag to prevent auto-restart during bot audio
+    isBotSpeakingRef.current = true;
+
+    // Pause speech recognition while audio is playing to prevent feedback
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+      console.log('🔇 Paused listening for bot audio');
+    }
+
     // Create or update audio element
     if (!audioRef.current) {
       audioRef.current = new Audio();
     }
 
     audioRef.current.src = audioUrl;
+
+    // Resume listening after audio finishes
+    audioRef.current.onended = () => {
+      isBotSpeakingRef.current = false;
+      console.log('🔊 Bot audio finished, resuming listening');
+      if (isListening) {
+        setTimeout(() => {
+          try {
+            recognitionRef.current?.start();
+            console.log('✓ Listening resumed');
+          } catch (e) {
+            console.log('Recognition already running or failed to restart:', e);
+          }
+        }, 500); // Small delay to ensure clean transition
+      }
+    };
+
+    audioRef.current.onerror = (error) => {
+      isBotSpeakingRef.current = false;
+      console.error("Error playing audio:", error);
+      // Fallback to text-to-speech if audio playback fails
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.type === 'bot') {
+        speak(lastMessage.content);
+      }
+    };
+
     audioRef.current.play().catch(error => {
+      isBotSpeakingRef.current = false;
       console.error("Error playing audio:", error);
       // Fallback to text-to-speech if audio playback fails
       const lastMessage = messages[messages.length - 1];
