@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { sendVoiceAssistantRequest } from "@/services/api";
 
 interface Message {
   type: "user" | "bot";
@@ -13,6 +14,7 @@ const VoiceAssistant = () => {
     { type: "bot", content: "Hello! I'm MediBot, your voice medical assistant. Click 'Start' and I'll help you book an appointment." }
   ]);
   const [transcript, setTranscript] = useState("...");
+  const [sessionId, setSessionId] = useState<string>("");  // Backend uses session_id
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -102,20 +104,48 @@ const VoiceAssistant = () => {
     setTranscript("...");
   };
 
-  const processSpeech = (message: string) => {
+  const processSpeech = async (message: string) => {
     if (!message || message.trim() === '') return;
 
     setMessages(prev => [...prev, { type: "user", content: message }]);
     setStatus("Processing...");
     setTranscript("...");
 
-    // Simulate AI response
-    setTimeout(() => {
-      const response = "I understand you need to book an appointment. Let me help you with that. What date would you prefer?";
-      setMessages(prev => [...prev, { type: "bot", content: response }]);
-      speak(response);
+    try {
+      // Send message to voice assistant backend API with correct field names
+      const response = await sendVoiceAssistantRequest({
+        message: message,                    // Backend expects 'message', not 'text'
+        session_id: sessionId || undefined,  // Backend uses session_id
+      });
+
+      // Check if request was successful
+      if (!response.success) {
+        throw new Error(response.message || 'API request failed');
+      }
+
+      // Store session ID for subsequent messages (backend uses session_id)
+      if (response.session_id && !sessionId) {
+        setSessionId(response.session_id);
+      }
+
+      // Backend returns 'message' field, not 'text_response'
+      const botResponse = response.message || response.text_response || "I'm here to help you!";
+      setMessages(prev => [...prev, { type: "bot", content: botResponse }]);
+      speak(botResponse);
       setStatus("Listening...");
-    }, 1500);
+    } catch (error) {
+      console.error("Error processing speech:", error);
+      const fallbackResponse = "Sorry, I'm having trouble connecting to the server. Please make sure the backend is running at http://127.0.0.1:8000";
+      setMessages(prev => [...prev, { type: "bot", content: fallbackResponse }]);
+      speak(fallbackResponse);
+      setStatus("Listening...");
+
+      toast({
+        title: "Connection Error",
+        description: "Failed to connect to voice assistant API.",
+        variant: "destructive",
+      });
+    }
   };
 
   const speak = (text: string) => {
