@@ -223,17 +223,28 @@ const VoiceAssistant = () => {
 
       {/* Captions Panel (Only shown when toggled) */}
       {showCaptions && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md rounded-t-[30px] p-6 max-h-[50vh] overflow-hidden shadow-[0_-10px_40px_rgba(0,0,0,0.3)] animate-[slideUp_0.3s_ease]">
+        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg rounded-t-[30px] p-6 max-h-[60vh] overflow-hidden shadow-[0_-10px_40px_rgba(0,0,0,0.2)] animate-[slideUp_0.3s_ease] border-t-2 border-white/50">
+          {/* Close Button */}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-[#667eea] font-bold text-lg">Conversation</h3>
+            <button
+              onClick={() => setShowCaptions(false)}
+              className="w-10 h-10 rounded-full bg-red-500/90 text-white font-bold text-lg cursor-pointer transition-all duration-300 hover:bg-red-600 hover:scale-110 flex items-center justify-center shadow-md"
+              title="Close Captions"
+            >
+              ✕
+            </button>
+          </div>
+
           {/* Message Display */}
-          <div className="mb-4 max-h-[200px] overflow-y-auto">
-            <h3 className="text-[#667eea] font-bold mb-3 text-lg">Conversation:</h3>
+          <div className="mb-4 max-h-[250px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#667eea]/30 scrollbar-track-transparent">
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`mb-3 p-3 rounded-lg animate-[slideIn_0.3s_ease] ${
+                className={`mb-3 p-3 rounded-lg animate-[slideIn_0.3s_ease] shadow-sm ${
                   msg.type === 'user'
-                    ? 'bg-[#667eea] text-white ml-[20%] text-right'
-                    : 'bg-[#e2e8f0] text-[#334155] mr-[20%]'
+                    ? 'bg-[#667eea]/90 text-white ml-[15%] text-right backdrop-blur-sm'
+                    : 'bg-white/70 text-[#334155] mr-[15%] backdrop-blur-sm'
                 }`}
               >
                 {msg.content}
@@ -244,7 +255,7 @@ const VoiceAssistant = () => {
 
           {/* Transcript */}
           {isListening && (
-            <div className="bg-[#f8fafc] rounded-[15px] p-4 text-left border-2 border-[#667eea]">
+            <div className="bg-white/60 backdrop-blur-sm rounded-[15px] p-4 text-left border-2 border-[#667eea]/50 shadow-sm">
               <div className="font-semibold text-[#667eea] mb-1">You're saying:</div>
               <div className="text-[#475569]">{transcript}</div>
             </div>
