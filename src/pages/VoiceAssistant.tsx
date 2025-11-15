@@ -64,9 +64,15 @@ const VoiceAssistant = () => {
       setTranscript((finalTranscript + interimTranscript).trim() || "...");
 
       if (finalTranscript.trim()) {
-        setTimeout(() => {
-          processSpeech(finalTranscript.trim());
-        }, 1500);
+        // IMMEDIATELY stop listening to prevent capturing bot's voice
+        isBotSpeakingRef.current = true;
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
+          console.log('🔇 Stopped listening - processing user input');
+        }
+
+        // Process speech immediately (no delay)
+        processSpeech(finalTranscript.trim());
       }
     };
 
@@ -115,7 +121,11 @@ const VoiceAssistant = () => {
   };
 
   const processSpeech = async (message: string) => {
-    if (!message || message.trim() === '') return;
+    if (!message || message.trim() === '') {
+      // If empty message, reset flag and resume listening
+      isBotSpeakingRef.current = false;
+      return;
+    }
 
     setMessages(prev => [...prev, { type: "user", content: message }]);
     setStatus("Processing...");
