@@ -170,9 +170,12 @@ const VoiceAssistant = () => {
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-[#667eea] to-[#764ba2] overflow-hidden relative p-5">
       {/* Heading */}
-      <h1 className="text-white text-4xl font-bold mb-12 drop-shadow-lg">
-        🤖 MediBot Voice Assistant
+      <h1 className="text-white text-4xl font-bold mb-4 drop-shadow-lg">
+        MediBot Voice Assistant
       </h1>
+      <p className="text-white/90 text-lg mb-12 drop-shadow">
+        {isListening ? 'Listening to your voice...' : 'Click START to begin conversation'}
+      </p>
 
       {/* Mic Animation */}
       <div className="w-[250px] h-[250px] mx-auto mb-12 relative flex justify-center items-center">
@@ -185,39 +188,38 @@ const VoiceAssistant = () => {
       </div>
 
       {/* Controls */}
-      <div className="flex gap-6 justify-center mb-8">
+      <div className="flex flex-col gap-4 items-center mb-8 w-full max-w-md">
+        <div className="flex gap-4 w-full">
+          <button
+            onClick={startVoiceAssistant}
+            disabled={isListening}
+            className="flex-1 px-8 py-4 rounded-lg bg-white text-[#667eea] text-lg font-bold uppercase tracking-wide cursor-pointer transition-all duration-300 hover:shadow-[0_8px_24px_rgba(255,255,255,0.3)] hover:translate-y-[-2px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          >
+            START
+          </button>
+          <button
+            onClick={stopVoiceAssistant}
+            disabled={!isListening}
+            className="flex-1 px-8 py-4 rounded-lg bg-white/20 text-white text-lg font-bold uppercase tracking-wide cursor-pointer transition-all duration-300 hover:bg-white/30 hover:translate-y-[-2px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          >
+            PAUSE
+          </button>
+        </div>
+
         <button
-          onClick={startVoiceAssistant}
-          disabled={isListening}
-          className="px-10 py-4 rounded-full bg-white text-[#667eea] text-lg font-bold cursor-pointer transition-all duration-300 flex items-center gap-3 hover:scale-105 hover:shadow-[0_10px_30px_rgba(255,255,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          onClick={startNewConversation}
+          className="w-full px-8 py-3 rounded-lg bg-red-500/90 text-white text-base font-semibold uppercase tracking-wide cursor-pointer transition-all duration-300 hover:bg-red-600 hover:translate-y-[-2px] shadow-lg"
         >
-          <span className="text-2xl">▶️</span> Start
+          NEW CONVERSATION
         </button>
+
         <button
-          onClick={stopVoiceAssistant}
-          disabled={!isListening}
-          className="px-10 py-4 rounded-full bg-white/20 text-white text-lg font-bold cursor-pointer transition-all duration-300 flex items-center gap-3 hover:bg-white/30 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          onClick={() => setShowCaptions(!showCaptions)}
+          className="w-full px-8 py-3 rounded-lg bg-white/10 text-white text-base font-semibold uppercase tracking-wide cursor-pointer transition-all duration-300 hover:bg-white/20 hover:translate-y-[-2px] backdrop-blur-sm border border-white/30"
         >
-          <span className="text-2xl">⏹️</span> Pause
+          {showCaptions ? 'HIDE CAPTIONS' : 'SHOW CAPTIONS'}
         </button>
       </div>
-
-      {/* New Conversation Button */}
-      <button
-        onClick={startNewConversation}
-        className="mb-8 w-14 h-14 rounded-full bg-red-500 text-white text-2xl font-bold cursor-pointer transition-all duration-300 flex items-center justify-center hover:bg-red-600 hover:scale-110 shadow-lg"
-        title="Start New Conversation"
-      >
-        ✕
-      </button>
-
-      {/* Caption Toggle Button */}
-      <button
-        onClick={() => setShowCaptions(!showCaptions)}
-        className="px-6 py-3 rounded-full bg-white/20 text-white text-base font-semibold cursor-pointer transition-all duration-300 hover:bg-white/30 backdrop-blur-sm"
-      >
-        {showCaptions ? '📝 Hide Captions' : '📝 Show Captions'}
-      </button>
 
       {/* Captions Panel (Only shown when toggled) */}
       {showCaptions && (
