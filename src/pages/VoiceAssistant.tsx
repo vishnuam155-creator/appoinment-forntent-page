@@ -15,6 +15,7 @@ const VoiceAssistant = () => {
   ]);
   const [transcript, setTranscript] = useState("...");
   const [sessionId, setSessionId] = useState<string>("");  // Backend uses session_id
+  const [showCaptions, setShowCaptions] = useState(false);  // Toggle for caption visibility
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -155,36 +156,81 @@ const VoiceAssistant = () => {
     window.speechSynthesis.speak(utterance);
   };
 
+  const startNewConversation = () => {
+    stopVoiceAssistant();
+    setMessages([
+      { type: "bot", content: "Hello! I'm MediBot, your voice medical assistant. Click 'Start' and I'll help you book an appointment." }
+    ]);
+    setSessionId("");
+    setTranscript("...");
+    setShowCaptions(false);
+    setStatus("Click 'Start' to begin");
+  };
+
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-[#667eea] to-[#764ba2] overflow-hidden">
-      <div className="w-full max-w-[600px] p-5 text-center">
-        <div className="bg-[rgba(255,255,255,0.95)] rounded-[30px] p-10 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
-          <h1 className="text-[#667eea] text-3xl mb-2.5">🤖 MediBot Voice Assistant</h1>
-          <p className="text-[#666] text-base mb-8">Your AI-Powered Medical Appointment Booking Assistant</p>
+    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-[#667eea] to-[#764ba2] overflow-hidden relative p-5">
+      {/* Heading */}
+      <h1 className="text-white text-4xl font-bold mb-12 drop-shadow-lg">
+        🤖 MediBot Voice Assistant
+      </h1>
 
-          {/* Wave Animation */}
-          <div className="w-[200px] h-[200px] mx-auto mb-8 relative flex justify-center items-center">
-            <div className="absolute w-full h-full rounded-full bg-gradient-to-br from-[#667eea] to-[#764ba2] opacity-40 animate-[pulse_2s_ease-in-out_infinite]" />
-            <div className="absolute w-full h-full rounded-full bg-gradient-to-br from-[#667eea] to-[#764ba2] opacity-30 animate-[pulse_2s_ease-in-out_infinite_0.3s]" />
-            <div className="absolute w-full h-full rounded-full bg-gradient-to-br from-[#667eea] to-[#764ba2] opacity-20 animate-[pulse_2s_ease-in-out_infinite_0.6s]" />
-            <div className={`relative z-10 text-6xl transition-all duration-300 ${isListening ? 'text-[#f43f5e] animate-[glow_1.5s_ease-in-out_infinite]' : 'text-[#667eea]'}`}>
-              🎤
-            </div>
-          </div>
+      {/* Mic Animation */}
+      <div className="w-[250px] h-[250px] mx-auto mb-12 relative flex justify-center items-center">
+        <div className="absolute w-full h-full rounded-full bg-white opacity-20 animate-[pulse_2s_ease-in-out_infinite]" />
+        <div className="absolute w-[85%] h-[85%] rounded-full bg-white opacity-15 animate-[pulse_2s_ease-in-out_infinite_0.3s]" />
+        <div className="absolute w-[70%] h-[70%] rounded-full bg-white opacity-10 animate-[pulse_2s_ease-in-out_infinite_0.6s]" />
+        <div className={`relative z-10 text-8xl transition-all duration-300 ${isListening ? 'animate-[glow_1.5s_ease-in-out_infinite]' : ''}`}>
+          🎤
+        </div>
+      </div>
 
-          {/* Status */}
-          <div className={`text-lg font-semibold mb-5 min-h-[30px] ${isListening ? 'text-[#f43f5e]' : 'text-[#667eea]'}`}>
-            {status}
-          </div>
+      {/* Controls */}
+      <div className="flex gap-6 justify-center mb-8">
+        <button
+          onClick={startVoiceAssistant}
+          disabled={isListening}
+          className="px-10 py-4 rounded-full bg-white text-[#667eea] text-lg font-bold cursor-pointer transition-all duration-300 flex items-center gap-3 hover:scale-105 hover:shadow-[0_10px_30px_rgba(255,255,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        >
+          <span className="text-2xl">▶️</span> Start
+        </button>
+        <button
+          onClick={stopVoiceAssistant}
+          disabled={!isListening}
+          className="px-10 py-4 rounded-full bg-white/20 text-white text-lg font-bold cursor-pointer transition-all duration-300 flex items-center gap-3 hover:bg-white/30 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        >
+          <span className="text-2xl">⏹️</span> Pause
+        </button>
+      </div>
 
+      {/* New Conversation Button */}
+      <button
+        onClick={startNewConversation}
+        className="mb-8 w-14 h-14 rounded-full bg-red-500 text-white text-2xl font-bold cursor-pointer transition-all duration-300 flex items-center justify-center hover:bg-red-600 hover:scale-110 shadow-lg"
+        title="Start New Conversation"
+      >
+        ✕
+      </button>
+
+      {/* Caption Toggle Button */}
+      <button
+        onClick={() => setShowCaptions(!showCaptions)}
+        className="px-6 py-3 rounded-full bg-white/20 text-white text-base font-semibold cursor-pointer transition-all duration-300 hover:bg-white/30 backdrop-blur-sm"
+      >
+        {showCaptions ? '📝 Hide Captions' : '📝 Show Captions'}
+      </button>
+
+      {/* Captions Panel (Only shown when toggled) */}
+      {showCaptions && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md rounded-t-[30px] p-6 max-h-[50vh] overflow-hidden shadow-[0_-10px_40px_rgba(0,0,0,0.3)] animate-[slideUp_0.3s_ease]">
           {/* Message Display */}
-          <div className="bg-[#f8fafc] rounded-[15px] p-5 mb-5 min-h-[100px] max-h-[200px] overflow-y-auto text-left">
+          <div className="mb-4 max-h-[200px] overflow-y-auto">
+            <h3 className="text-[#667eea] font-bold mb-3 text-lg">Conversation:</h3>
             {messages.map((msg, idx) => (
-              <div 
+              <div
                 key={idx}
-                className={`mb-4 p-3 rounded-lg animate-[slideIn_0.3s_ease] ${
-                  msg.type === 'user' 
-                    ? 'bg-[#667eea] text-white ml-[20%] text-right' 
+                className={`mb-3 p-3 rounded-lg animate-[slideIn_0.3s_ease] ${
+                  msg.type === 'user'
+                    ? 'bg-[#667eea] text-white ml-[20%] text-right'
                     : 'bg-[#e2e8f0] text-[#334155] mr-[20%]'
                 }`}
               >
@@ -195,39 +241,27 @@ const VoiceAssistant = () => {
           </div>
 
           {/* Transcript */}
-          <div className="bg-[#f8fafc] rounded-[15px] p-4 mb-5 text-left text-sm text-[#64748b]">
-            <div className="font-semibold text-[#475569] mb-1">You're saying:</div>
-            <div>{transcript}</div>
-          </div>
-
-          {/* Controls */}
-          <div className="flex gap-4 justify-center">
-            <button 
-              onClick={startVoiceAssistant}
-              disabled={isListening}
-              className="px-8 py-4 rounded-[25px] bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white text-base font-semibold cursor-pointer transition-all duration-300 flex items-center gap-2.5 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(102,126,234,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>▶️</span> Start
-            </button>
-            <button 
-              onClick={stopVoiceAssistant}
-              disabled={!isListening}
-              className="px-8 py-4 rounded-[25px] bg-[#e2e8f0] text-[#334155] text-base font-semibold cursor-pointer transition-all duration-300 flex items-center gap-2.5 hover:bg-[#cbd5e1] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>⏹️</span> Stop
-            </button>
-          </div>
+          {isListening && (
+            <div className="bg-[#f8fafc] rounded-[15px] p-4 text-left border-2 border-[#667eea]">
+              <div className="font-semibold text-[#667eea] mb-1">You're saying:</div>
+              <div className="text-[#475569]">{transcript}</div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       <style>{`
         @keyframes slideIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(100%); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         @keyframes glow {
-          0%, 100% { filter: drop-shadow(0 0 10px #f43f5e); }
-          50% { filter: drop-shadow(0 0 20px #f43f5e); }
+          0%, 100% { filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)); }
+          50% { filter: drop-shadow(0 0 40px rgba(255, 255, 255, 1)); }
         }
       `}</style>
     </div>
