@@ -126,13 +126,34 @@ const VoiceAssistant = () => {
         action: sessionId ? 'continue' : 'start',  // Start new session or continue existing
       });
 
-      // Store session ID for subsequent messages
-      if (response.session_id && !sessionId) {
-        setSessionId(response.session_id);
+      // Debug: Log the full response to see structure
+      console.log('=== VOICEBOT API RESPONSE ===');
+      console.log('Full response object:', response);
+      console.log('Response keys:', Object.keys(response));
+      console.log('Response type:', typeof response);
+      console.log('============================');
+
+      // Handle response - check all possible locations for session_id
+      const sessionIdFromResponse = response.session_id || (response as any).sessionId || (response as any).session;
+      if (sessionIdFromResponse && !sessionId) {
+        setSessionId(sessionIdFromResponse);
+        console.log('✓ Session ID set:', sessionIdFromResponse);
       }
 
-      // Voicebot returns 'response' field
-      const botResponse = response.response || "I'm here to help you!";
+      // Voicebot returns 'response' field - check multiple possible response fields
+      const botResponse = response.response
+        || (response as any).message
+        || (response as any).text
+        || (response as any).bot_response
+        || (response as any).reply
+        || "I'm here to help you!";
+
+      console.log('✓ Bot response extracted:', botResponse);
+
+      if (!botResponse || botResponse === "I'm here to help you!") {
+        console.warn('⚠️ No valid response found in:', response);
+      }
+
       setMessages(prev => [...prev, { type: "bot", content: botResponse }]);
 
       // Enable bot voice response
