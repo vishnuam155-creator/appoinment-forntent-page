@@ -168,7 +168,7 @@ export const sendVoicebotRequest = async (
     formData.append('action', request.action);
   }
 
-  const response = await apiClient.post<VoicebotResponse>('/voicebot/', formData, {
+  const response = await apiClient.post<VoicebotResponse>('/voicebot/api/', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },

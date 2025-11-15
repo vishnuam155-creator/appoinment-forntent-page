@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { sendVoiceAssistantRequest } from "@/services/api";
+import { sendVoicebotRequest } from "@/services/api";
 
 interface Message {
   type: "user" | "bot";
@@ -18,6 +18,7 @@ const VoiceAssistant = () => {
   const [showCaptions, setShowCaptions] = useState(false);  // Toggle for caption visibility
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);  // For playing bot audio responses
   const { toast } = useToast();
 
   useEffect(() => {
@@ -101,6 +102,11 @@ const VoiceAssistant = () => {
     setIsListening(false);
     recognitionRef.current?.stop();
     window.speechSynthesis.cancel();
+    // Stop audio playback if active
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     setStatus("Stopped");
     setTranscript("...");
   };
@@ -113,37 +119,41 @@ const VoiceAssistant = () => {
     setTranscript("...");
 
     try {
-      // Send message to voice assistant backend API with correct field names
-      const response = await sendVoiceAssistantRequest({
-        message: message,                    // Backend expects 'message', not 'text'
+      // Send message to voicebot API at /voicebot/api/
+      const response = await sendVoicebotRequest({
+        text: message,                       // Voicebot expects 'text' field
         session_id: sessionId || undefined,  // Backend uses session_id
+        action: sessionId ? 'continue' : 'start',  // Start new session or continue existing
       });
 
-      // Check if request was successful
-      if (!response.success) {
-        throw new Error(response.message || 'API request failed');
-      }
-
-      // Store session ID for subsequent messages (backend uses session_id)
+      // Store session ID for subsequent messages
       if (response.session_id && !sessionId) {
         setSessionId(response.session_id);
       }
 
-      // Backend returns 'message' field, not 'text_response'
-      const botResponse = response.message || response.text_response || "I'm here to help you!";
+      // Voicebot returns 'response' field
+      const botResponse = response.response || "I'm here to help you!";
       setMessages(prev => [...prev, { type: "bot", content: botResponse }]);
-      speak(botResponse);
+
+      // Enable bot voice response
+      // If backend provides audio_url, play it; otherwise use text-to-speech
+      if (response.audio_url) {
+        playAudio(response.audio_url);
+      } else {
+        speak(botResponse);
+      }
+
       setStatus("Listening...");
     } catch (error) {
       console.error("Error processing speech:", error);
-      const fallbackResponse = "Sorry, I'm having trouble connecting to the server. Please make sure the backend is running at http://127.0.0.1:8000";
+      const fallbackResponse = "Sorry, I'm having trouble connecting to the voicebot server. Please make sure the backend is running at http://localhost:8000/voicebot/api/";
       setMessages(prev => [...prev, { type: "bot", content: fallbackResponse }]);
       speak(fallbackResponse);
       setStatus("Listening...");
 
       toast({
         title: "Connection Error",
-        description: "Failed to connect to voice assistant API.",
+        description: "Failed to connect to voicebot API.",
         variant: "destructive",
       });
     }
@@ -154,6 +164,26 @@ const VoiceAssistant = () => {
     utterance.lang = 'en-IN';
     utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
+  };
+
+  const playAudio = (audioUrl: string) => {
+    // Stop any ongoing speech synthesis
+    window.speechSynthesis.cancel();
+
+    // Create or update audio element
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+    }
+
+    audioRef.current.src = audioUrl;
+    audioRef.current.play().catch(error => {
+      console.error("Error playing audio:", error);
+      // Fallback to text-to-speech if audio playback fails
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.type === 'bot') {
+        speak(lastMessage.content);
+      }
+    });
   };
 
   const startNewConversation = () => {
