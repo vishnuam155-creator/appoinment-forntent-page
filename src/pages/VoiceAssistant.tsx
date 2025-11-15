@@ -15,6 +15,7 @@ const VoiceAssistant = () => {
   ]);
   const [transcript, setTranscript] = useState("...");
   const [sessionId, setSessionId] = useState<string>("");  // Backend uses session_id
+  const [showCaptions, setShowCaptions] = useState(false);  // Toggle for caption visibility
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -155,37 +156,95 @@ const VoiceAssistant = () => {
     window.speechSynthesis.speak(utterance);
   };
 
+  const startNewConversation = () => {
+    stopVoiceAssistant();
+    setMessages([
+      { type: "bot", content: "Hello! I'm MediBot, your voice medical assistant. Click 'Start' and I'll help you book an appointment." }
+    ]);
+    setSessionId("");
+    setTranscript("...");
+    setShowCaptions(false);
+    setStatus("Click 'Start' to begin");
+  };
+
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-[#667eea] to-[#764ba2] overflow-hidden">
-      <div className="w-full max-w-[600px] p-5 text-center">
-        <div className="bg-[rgba(255,255,255,0.95)] rounded-[30px] p-10 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
-          <h1 className="text-[#667eea] text-3xl mb-2.5">🤖 MediBot Voice Assistant</h1>
-          <p className="text-[#666] text-base mb-8">Your AI-Powered Medical Appointment Booking Assistant</p>
+    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-[#667eea] to-[#764ba2] overflow-hidden relative p-5">
+      {/* Heading */}
+      <h1 className="text-white text-4xl font-bold mb-4 drop-shadow-lg">
+        MediBot Voice Assistant
+      </h1>
+      <p className="text-white/90 text-lg mb-12 drop-shadow">
+        {isListening ? 'Listening to your voice...' : 'Click START to begin conversation'}
+      </p>
 
-          {/* Wave Animation */}
-          <div className="w-[200px] h-[200px] mx-auto mb-8 relative flex justify-center items-center">
-            <div className="absolute w-full h-full rounded-full bg-gradient-to-br from-[#667eea] to-[#764ba2] opacity-40 animate-[pulse_2s_ease-in-out_infinite]" />
-            <div className="absolute w-full h-full rounded-full bg-gradient-to-br from-[#667eea] to-[#764ba2] opacity-30 animate-[pulse_2s_ease-in-out_infinite_0.3s]" />
-            <div className="absolute w-full h-full rounded-full bg-gradient-to-br from-[#667eea] to-[#764ba2] opacity-20 animate-[pulse_2s_ease-in-out_infinite_0.6s]" />
-            <div className={`relative z-10 text-6xl transition-all duration-300 ${isListening ? 'text-[#f43f5e] animate-[glow_1.5s_ease-in-out_infinite]' : 'text-[#667eea]'}`}>
-              🎤
-            </div>
-          </div>
+      {/* Mic Animation */}
+      <div className="w-[250px] h-[250px] mx-auto mb-12 relative flex justify-center items-center">
+        <div className="absolute w-full h-full rounded-full bg-white opacity-20 animate-[pulse_2s_ease-in-out_infinite]" />
+        <div className="absolute w-[85%] h-[85%] rounded-full bg-white opacity-15 animate-[pulse_2s_ease-in-out_infinite_0.3s]" />
+        <div className="absolute w-[70%] h-[70%] rounded-full bg-white opacity-10 animate-[pulse_2s_ease-in-out_infinite_0.6s]" />
+        <div className={`relative z-10 text-8xl transition-all duration-300 ${isListening ? 'animate-[glow_1.5s_ease-in-out_infinite]' : ''}`}>
+          🎤
+        </div>
+      </div>
 
-          {/* Status */}
-          <div className={`text-lg font-semibold mb-5 min-h-[30px] ${isListening ? 'text-[#f43f5e]' : 'text-[#667eea]'}`}>
-            {status}
+      {/* Controls */}
+      <div className="flex flex-col gap-4 items-center mb-8 w-full max-w-md">
+        <div className="flex gap-4 w-full">
+          <button
+            onClick={startVoiceAssistant}
+            disabled={isListening}
+            className="flex-1 px-8 py-4 rounded-lg bg-white text-[#667eea] text-lg font-bold uppercase tracking-wide cursor-pointer transition-all duration-300 hover:shadow-[0_8px_24px_rgba(255,255,255,0.3)] hover:translate-y-[-2px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          >
+            START
+          </button>
+          <button
+            onClick={stopVoiceAssistant}
+            disabled={!isListening}
+            className="flex-1 px-8 py-4 rounded-lg bg-white/20 text-white text-lg font-bold uppercase tracking-wide cursor-pointer transition-all duration-300 hover:bg-white/30 hover:translate-y-[-2px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          >
+            PAUSE
+          </button>
+        </div>
+
+        <button
+          onClick={startNewConversation}
+          className="w-full px-8 py-3 rounded-lg bg-red-500/90 text-white text-base font-semibold uppercase tracking-wide cursor-pointer transition-all duration-300 hover:bg-red-600 hover:translate-y-[-2px] shadow-lg"
+        >
+          NEW CONVERSATION
+        </button>
+
+        <button
+          onClick={() => setShowCaptions(!showCaptions)}
+          className="w-full px-8 py-3 rounded-lg bg-white/10 text-white text-base font-semibold uppercase tracking-wide cursor-pointer transition-all duration-300 hover:bg-white/20 hover:translate-y-[-2px] backdrop-blur-sm border border-white/30"
+        >
+          {showCaptions ? 'HIDE CAPTIONS' : 'SHOW CAPTIONS'}
+        </button>
+      </div>
+
+      {/* Captions Panel (Only shown when toggled) */}
+      {showCaptions && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg rounded-t-[30px] p-6 max-h-[60vh] overflow-hidden shadow-[0_-10px_40px_rgba(0,0,0,0.2)] animate-[slideUp_0.3s_ease] border-t-2 border-white/50">
+          {/* Close Button */}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-[#667eea] font-bold text-lg">Conversation</h3>
+            <button
+              onClick={() => setShowCaptions(false)}
+              className="w-10 h-10 rounded-full bg-red-500/90 text-white font-bold text-lg cursor-pointer transition-all duration-300 hover:bg-red-600 hover:scale-110 flex items-center justify-center shadow-md"
+              title="Close Captions"
+            >
+              ✕
+            </button>
           </div>
 
           {/* Message Display */}
-          <div className="bg-[#f8fafc] rounded-[15px] p-5 mb-5 min-h-[100px] max-h-[200px] overflow-y-auto text-left">
+          <div className="mb-4 max-h-[250px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#667eea]/30 scrollbar-track-transparent">
             {messages.map((msg, idx) => (
-              <div 
+              <div
                 key={idx}
-                className={`mb-4 p-3 rounded-lg animate-[slideIn_0.3s_ease] ${
-                  msg.type === 'user' 
-                    ? 'bg-[#667eea] text-white ml-[20%] text-right' 
-                    : 'bg-[#e2e8f0] text-[#334155] mr-[20%]'
+                className={`mb-3 p-3 rounded-lg animate-[slideIn_0.3s_ease] shadow-sm ${
+                  msg.type === 'user'
+                    ? 'bg-[#667eea]/90 text-white ml-[15%] text-right backdrop-blur-sm'
+                    : 'bg-white/70 text-[#334155] mr-[15%] backdrop-blur-sm'
                 }`}
               >
                 {msg.content}
@@ -195,39 +254,27 @@ const VoiceAssistant = () => {
           </div>
 
           {/* Transcript */}
-          <div className="bg-[#f8fafc] rounded-[15px] p-4 mb-5 text-left text-sm text-[#64748b]">
-            <div className="font-semibold text-[#475569] mb-1">You're saying:</div>
-            <div>{transcript}</div>
-          </div>
-
-          {/* Controls */}
-          <div className="flex gap-4 justify-center">
-            <button 
-              onClick={startVoiceAssistant}
-              disabled={isListening}
-              className="px-8 py-4 rounded-[25px] bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white text-base font-semibold cursor-pointer transition-all duration-300 flex items-center gap-2.5 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(102,126,234,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>▶️</span> Start
-            </button>
-            <button 
-              onClick={stopVoiceAssistant}
-              disabled={!isListening}
-              className="px-8 py-4 rounded-[25px] bg-[#e2e8f0] text-[#334155] text-base font-semibold cursor-pointer transition-all duration-300 flex items-center gap-2.5 hover:bg-[#cbd5e1] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>⏹️</span> Stop
-            </button>
-          </div>
+          {isListening && (
+            <div className="bg-white/60 backdrop-blur-sm rounded-[15px] p-4 text-left border-2 border-[#667eea]/50 shadow-sm">
+              <div className="font-semibold text-[#667eea] mb-1">You're saying:</div>
+              <div className="text-[#475569]">{transcript}</div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       <style>{`
         @keyframes slideIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(100%); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         @keyframes glow {
-          0%, 100% { filter: drop-shadow(0 0 10px #f43f5e); }
-          50% { filter: drop-shadow(0 0 20px #f43f5e); }
+          0%, 100% { filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)); }
+          50% { filter: drop-shadow(0 0 40px rgba(255, 255, 255, 1)); }
         }
       `}</style>
     </div>
