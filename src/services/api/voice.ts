@@ -174,11 +174,6 @@ export const sendVoicebotRequest = async (
     },
   });
 
-  // Debug logging to see raw response
-  console.log('Raw axios response:', response);
-  console.log('Response data:', response.data);
-  console.log('Response data type:', typeof response.data);
-
   return response.data;
 };
 

@@ -68,7 +68,6 @@ const VoiceAssistant = () => {
         isBotSpeakingRef.current = true;
         if (recognitionRef.current) {
           recognitionRef.current.stop();
-          console.log('🔇 Stopped listening - processing user input');
         }
 
         // Process speech immediately (no delay)
@@ -77,9 +76,13 @@ const VoiceAssistant = () => {
     };
 
     recognitionRef.current.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      if (event.error === 'no-speech' && isListening) {
-        recognitionRef.current?.start();
+      // Silently handle 'no-speech' errors by restarting
+      if (event.error === 'no-speech' && isListening && !isBotSpeakingRef.current) {
+        try {
+          recognitionRef.current?.start();
+        } catch (e) {
+          // Silently handle restart errors
+        }
       }
     };
 
@@ -90,7 +93,7 @@ const VoiceAssistant = () => {
           try {
             recognitionRef.current?.start();
           } catch (e) {
-            console.log('Recognition restart failed:', e);
+            // Silently handle restart errors
           }
         }, 100);
       } else if (!isListening) {
@@ -132,40 +135,26 @@ const VoiceAssistant = () => {
     setTranscript("...");
 
     try {
-      // Send message to voicebot API at /voicebot/api/
+      // Send message to voicebot API
       const response = await sendVoicebotRequest({
-        text: message,                       // Voicebot expects 'text' field
-        session_id: sessionId || undefined,  // Backend uses session_id
-        action: sessionId ? 'continue' : 'start',  // Start new session or continue existing
+        text: message,
+        session_id: sessionId || undefined,
+        action: sessionId ? 'continue' : 'start',
       });
 
-      // Debug: Log the full response to see structure
-      console.log('=== VOICEBOT API RESPONSE ===');
-      console.log('Full response object:', response);
-      console.log('Response keys:', Object.keys(response));
-      console.log('Response type:', typeof response);
-      console.log('============================');
-
-      // Handle response - check all possible locations for session_id
+      // Store session ID
       const sessionIdFromResponse = response.session_id || (response as any).sessionId || (response as any).session;
       if (sessionIdFromResponse && !sessionId) {
         setSessionId(sessionIdFromResponse);
-        console.log('✓ Session ID set:', sessionIdFromResponse);
       }
 
-      // Voicebot returns 'response' field - check multiple possible response fields
+      // Extract bot response from multiple possible fields
       const botResponse = response.response
         || (response as any).message
         || (response as any).text
         || (response as any).bot_response
         || (response as any).reply
         || "I'm here to help you!";
-
-      console.log('✓ Bot response extracted:', botResponse);
-
-      if (!botResponse || botResponse === "I'm here to help you!") {
-        console.warn('⚠️ No valid response found in:', response);
-      }
 
       setMessages(prev => [...prev, { type: "bot", content: botResponse }]);
 
@@ -200,7 +189,6 @@ const VoiceAssistant = () => {
     // Pause speech recognition while bot is speaking to prevent feedback
     if (recognitionRef.current && isListening) {
       recognitionRef.current.stop();
-      console.log('🔇 Paused listening for bot speech');
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -210,31 +198,28 @@ const VoiceAssistant = () => {
     // Resume listening after bot finishes speaking
     utterance.onend = () => {
       isBotSpeakingRef.current = false;
-      console.log('🔊 Bot finished speaking, resuming listening');
       if (isListening) {
         setTimeout(() => {
           try {
             recognitionRef.current?.start();
-            console.log('✓ Listening resumed');
           } catch (e) {
-            console.log('Recognition already running or failed to restart:', e);
+            // Silently handle restart errors
           }
-        }, 500); // Small delay to ensure clean transition
+        }, 300); // Optimized delay for smoother transition
       }
     };
 
-    utterance.onerror = (event) => {
+    utterance.onerror = () => {
       isBotSpeakingRef.current = false;
-      console.error('Speech synthesis error:', event);
       // Resume listening even if speech fails
       if (isListening) {
         setTimeout(() => {
           try {
             recognitionRef.current?.start();
           } catch (e) {
-            console.log('Failed to restart recognition after error:', e);
+            // Silently handle restart errors
           }
-        }, 500);
+        }, 300);
       }
     };
 
@@ -251,7 +236,6 @@ const VoiceAssistant = () => {
     // Pause speech recognition while audio is playing to prevent feedback
     if (recognitionRef.current && isListening) {
       recognitionRef.current.stop();
-      console.log('🔇 Paused listening for bot audio');
     }
 
     // Create or update audio element
@@ -264,22 +248,19 @@ const VoiceAssistant = () => {
     // Resume listening after audio finishes
     audioRef.current.onended = () => {
       isBotSpeakingRef.current = false;
-      console.log('🔊 Bot audio finished, resuming listening');
       if (isListening) {
         setTimeout(() => {
           try {
             recognitionRef.current?.start();
-            console.log('✓ Listening resumed');
           } catch (e) {
-            console.log('Recognition already running or failed to restart:', e);
+            // Silently handle restart errors
           }
-        }, 500); // Small delay to ensure clean transition
+        }, 300); // Optimized delay for smoother transition
       }
     };
 
-    audioRef.current.onerror = (error) => {
+    audioRef.current.onerror = () => {
       isBotSpeakingRef.current = false;
-      console.error("Error playing audio:", error);
       // Fallback to text-to-speech if audio playback fails
       const lastMessage = messages[messages.length - 1];
       if (lastMessage && lastMessage.type === 'bot') {
@@ -287,9 +268,8 @@ const VoiceAssistant = () => {
       }
     };
 
-    audioRef.current.play().catch(error => {
+    audioRef.current.play().catch(() => {
       isBotSpeakingRef.current = false;
-      console.error("Error playing audio:", error);
       // Fallback to text-to-speech if audio playback fails
       const lastMessage = messages[messages.length - 1];
       if (lastMessage && lastMessage.type === 'bot') {
